@@ -1,0 +1,139 @@
+# ============================================
+# Local Development Docker Compose
+# ============================================
+# Uses shared infrastructure (Supabase, Redis, Qdrant)
+# Start infrastructure first: cd ../infrastructure && supabase start && docker compose up -d
+# ============================================
+# Usage: docker compose -f docker-compose.dev.yml up
+# ============================================
+
+services:
+  simstudio:
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    container_name: sim-app-dev
+    # Development: Mount source code for hot reloading
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/sim/node_modules
+      - /app/packages/db/node_modules
+    # Development: Fix permissions for .next directory
+    user: "1001:1001"
+    # Development: Environment variables
+    environment:
+      - NODE_ENV=development
+      # Shared Supabase database
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/sim
+      # Supabase client (for future migration)
+      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
+      # Redis (shared)
+      - REDIS_URL=redis://host.docker.internal:6379
+      # Better Auth
+      - BETTER_AUTH_URL=http://sim.localhost
+      - NEXT_PUBLIC_APP_URL=http://sim.localhost
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev_secret_change_in_production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-dev_key_change_in_production}
+      # AI/Copilot
+      - COPILOT_API_KEY=${COPILOT_API_KEY:-}
+      - SIM_AGENT_API_URL=${SIM_AGENT_API_URL:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      # Socket server
+      - SOCKET_SERVER_URL=ws://sim.localhost/socket
+      - NEXT_PUBLIC_SOCKET_URL=ws://sim.localhost/socket
+      - WATCHPACK_POLLING=true
+    # Traefik: Labels for local development domain
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.sim-dev.rule=Host(`sim.localhost`)"
+      - "traefik.http.routers.sim-dev.entrypoints=web"
+      - "traefik.http.routers.sim-dev.service=sim-dev"
+      - "traefik.http.services.sim-dev.loadbalancer.server.port=3000"
+    networks:
+      - traefik
+    depends_on:
+      realtime:
+        condition: service_started
+    # Development: Health check
+    healthcheck:
+      test: ['CMD', 'sh', '-c', 'curl -f http://localhost:3000 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    command: >
+      sh -c "
+        echo 'Waiting for Supabase database...' &&
+        sleep 5 &&
+        echo 'Installing dependencies...' &&
+        cd apps/sim && bun install &&
+        echo 'Running database migrations...' &&
+        for i in 1 2 3 4 5; do
+          cd /app/packages/db && bun run db:push && break || { echo 'Retrying schema push...'; sleep 3; }
+        done &&
+        echo 'Starting development server...' &&
+        cd /app/apps/sim && bun run dev
+      "
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  realtime:
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    container_name: sim-realtime-dev
+    ports:
+      - '3002:3002'
+    # Development: Mount source code for hot reloading
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/sim/node_modules
+      - /app/packages/db/node_modules
+    # Development: Environment variables
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/sim
+      - NEXT_PUBLIC_APP_URL=http://sim.localhost
+      - BETTER_AUTH_URL=http://sim.localhost
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev_secret_change_in_production}
+      - PORT=3002
+      - SOCKET_PORT=3002
+    # Traefik: Labels for socket server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.sim-socket-dev.rule=Host(`sim.localhost`) && PathPrefix(`/socket`)"
+      - "traefik.http.routers.sim-socket-dev.entrypoints=web"
+      - "traefik.http.routers.sim-socket-dev.service=sim-socket-dev"
+      - "traefik.http.routers.sim-socket-dev.middlewares=sim-socket-stripprefix"
+      - "traefik.http.routers.sim-socket-dev.priority=20"
+      - "traefik.http.services.sim-socket-dev.loadbalancer.server.port=3002"
+      - "traefik.http.middlewares.sim-socket-stripprefix.stripprefix.prefixes=/socket"
+    networks:
+      - traefik
+    healthcheck:
+      test: ['CMD', 'sh', '-c', 'curl -f http://localhost:3002/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: sh -c "cd apps/sim && bun install && bun run dev:sockets"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Networks
+networks:
+  traefik:
+    external: true
+
