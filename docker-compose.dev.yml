@@ -45,6 +45,11 @@ services:
       - SOCKET_SERVER_URL=wss://sim.localhost/socket
       - NEXT_PUBLIC_SOCKET_URL=wss://sim.localhost/socket
       - WATCHPACK_POLLING=true
+      # OpenTelemetry
+      - OTEL_SERVICE_NAME=sim
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
+      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
+      - OTEL_TRACES_SAMPLER_ARG=1.0
     # Traefik: Labels for local development domain
     labels:
       - "traefik.enable=true"
@@ -107,6 +112,11 @@ services:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev_secret_change_in_production}
       - PORT=3002
       - SOCKET_PORT=3002
+      # OpenTelemetry
+      - OTEL_SERVICE_NAME=sim-realtime
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
+      - OTEL_TRACES_SAMPLER=parentbased_traceidratio
+      - OTEL_TRACES_SAMPLER_ARG=1.0
     # Traefik: Labels for socket server
     labels:
       - "traefik.enable=true"
