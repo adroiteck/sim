@@ -30,14 +30,21 @@ const config = {
    * OTLP Endpoint URL where telemetry data is sent
    * Change this if you want to send telemetry to your own collector
    * Supports any OTLP-compatible backend (Jaeger, Grafana Tempo, etc.)
+   *
+   * Supports both TELEMETRY_ENDPOINT and OTEL_EXPORTER_OTLP_ENDPOINT for
+   * compatibility with shared infrastructure (OTEL_EXPORTER_OTLP_ENDPOINT is standard).
    */
-  endpoint: env.TELEMETRY_ENDPOINT || 'https://telemetry.simstudio.ai/v1/traces',
+  endpoint:
+    env.TELEMETRY_ENDPOINT ||
+    (process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+      ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`
+      : 'https://telemetry.simstudio.ai/v1/traces'),
 
   /**
    * Service name used to identify this instance
-   * You can change this for your fork
+   * Supports OTEL_SERVICE_NAME for compatibility with shared infrastructure.
    */
-  serviceName: 'sim-studio',
+  serviceName: process.env.OTEL_SERVICE_NAME || 'sim-studio',
 
   /**
    * Version of the service, defaults to the app version
