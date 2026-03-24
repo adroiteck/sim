@@ -58,6 +58,15 @@ app:
     # Node environment
     NODE_ENV: "production"
     NEXT_TELEMETRY_DISABLED: "1"
+
+    # OpenTelemetry — Central collector (msp-monitoring namespace)
+    OTEL_SERVICE_NAME: "sim-web"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.msp-monitoring.svc:4318"
+    OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
+    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production,service.namespace=sim,app.role=web,team=product"
+    OTEL_LOGS_EXPORTER: "none"
     
     # Authentication and encryption secrets (REQUIRED for production)
     # Generate secure 32-character secrets using: openssl rand -hex 32
@@ -200,7 +209,16 @@ realtime:
     
     # Node environment
     NODE_ENV: "production"
-  
+
+    # OpenTelemetry — Central collector (msp-monitoring namespace)
+    OTEL_SERVICE_NAME: "sim-realtime"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.msp-monitoring.svc:4318"
+    OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
+    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production,service.namespace=sim,app.role=realtime,team=product"
+    OTEL_LOGS_EXPORTER: "none"
+
   # Service configuration
   service:
     type: ClusterIP
