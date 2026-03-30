@@ -10,32 +10,20 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const posthogEnabled = getEnv('NEXT_PUBLIC_POSTHOG_ENABLED')
     const posthogKey = getEnv('NEXT_PUBLIC_POSTHOG_KEY')
 
+    const posthogHost = getEnv('NEXT_PUBLIC_POSTHOG_HOST') || 'https://posthog.apps.ocp.aps.kim'
+
     if (isTruthy(posthogEnabled) && posthogKey && !posthog.__loaded) {
       posthog.init(posthogKey, {
-        api_host: '/ingest',
-        ui_host: 'https://us.posthog.com',
-        defaults: '2025-05-24',
-        person_profiles: 'identified_only',
+        api_host: posthogHost,
+        person_profiles: 'always',
+        advanced_disable_decide: true,
         capture_pageview: true,
-        capture_pageleave: false,
-        capture_performance: false,
+        capture_pageleave: true,
+        autocapture: true,
         session_recording: {
-          maskAllInputs: false,
-          maskInputOptions: {
-            password: true,
-            email: false,
-          },
-          recordCrossOriginIframes: false,
-          recordHeaders: false,
-          recordBody: false,
+          recordCrossOriginIframes: true,
         },
-        autocapture: {
-          dom_event_allowlist: ['click', 'submit', 'change'],
-          element_allowlist: ['button', 'a', 'input'],
-        },
-        capture_dead_clicks: false,
         persistence: 'localStorage+cookie',
-        enable_heatmaps: false,
       })
     }
   }, [])
