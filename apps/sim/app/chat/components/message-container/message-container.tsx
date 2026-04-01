@@ -48,7 +48,7 @@ export const ChatMessageContainer = memo(function ChatMessageContainer({
       {/* Scrollable Messages Area */}
       <div
         ref={messagesContainerRef}
-        className='absolute inset-0 touch-pan-y overflow-y-auto overscroll-auto scroll-smooth'
+        className='absolute inset-0 touch-pan-y overflow-y-auto overscroll-auto scroll-smooth ph-mask'
       >
         <div className='mx-auto max-w-3xl px-4 pt-10 pb-20'>
           {messages.length === 0 ? (
